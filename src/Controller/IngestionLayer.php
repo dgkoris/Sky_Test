@@ -8,6 +8,8 @@ use Symfony\Bundle\FrameworkBundle\Controller\Controller;
 use App\Constants;
 use App\Entity\IngestionData;
 
+define('MINUTE_SECONDS', 60);
+
 class IngestionLayer extends Controller {
 
     private function get_ingestion_data($time) {
@@ -44,13 +46,13 @@ class IngestionLayer extends Controller {
     public function ingest($minutes = 5) {
 
         $time = time();
-        $time -= $minutes * Constants::MINUTE_SECONDS;
+        $time -= $minutes * MINUTE_SECONDS;
 
         $data = array();
         $total = $minutes + 1;
         for ($i = 0; $i < $total; $i++) {
             $data[] = self::get_ingestion_data($time);
-            $time += Constants::MINUTE_SECONDS;
+            $time += MINUTE_SECONDS;
         }
 
         $json = self::set_ingestion_data($data);
@@ -66,7 +68,7 @@ class IngestionLayer extends Controller {
     public function ingest_realtime($minutes = 5) {
 
         $default_max_time = ini_get('max_execution_time');
-        set_time_limit($default_max_time + $minutes * Constants::MINUTE_SECONDS);
+        set_time_limit($default_max_time + $minutes * MINUTE_SECONDS);
         // echo ini_get('max_execution_time') . '<br>';
 
         $data = array();
@@ -75,7 +77,7 @@ class IngestionLayer extends Controller {
             $time = time();
             $data[] = self::get_ingestion_data($time);
             if ($i < $minutes) {
-                sleep(Constants::MINUTE_SECONDS);
+                sleep(MINUTE_SECONDS);
             }
         }
 

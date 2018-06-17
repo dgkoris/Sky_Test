@@ -12,39 +12,58 @@ use Symfony\Bridge\Doctrine\RegistryInterface;
  * @method IngestionData[]    findAll()
  * @method IngestionData[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
-class IngestionDataRepository extends ServiceEntityRepository
-{
-    public function __construct(RegistryInterface $registry)
-    {
+class IngestionDataRepository extends ServiceEntityRepository {
+
+    public function __construct(RegistryInterface $registry) {
         parent::__construct($registry, IngestionData::class);
     }
 
-//    /**
-//     * @return IngestionData[] Returns an array of IngestionData objects
-//     */
-    /*
-    public function findByExampleField($value)
-    {
-        return $this->createQueryBuilder('i')
-            ->andWhere('i.exampleField = :val')
-            ->setParameter('val', $value)
-            ->orderBy('i.id', 'ASC')
-            ->setMaxResults(10)
-            ->getQuery()
-            ->getResult()
-        ;
-    }
-    */
+    /**
+     * @param $timestamp
+     * @return IngestionData[]
+     */
+    public function findAllGreaterThan($timestamp): array {
 
-    /*
-    public function findOneBySomeField($value): ?IngestionData
-    {
-        return $this->createQueryBuilder('i')
-            ->andWhere('i.exampleField = :val')
-            ->setParameter('val', $value)
-            ->getQuery()
-            ->getOneOrNullResult()
-        ;
+        $qb = $this->createQueryBuilder('data')
+                ->andWhere('data.timestamp >= :timestamp')
+                ->setParameter('timestamp', $timestamp)
+                ->orderBy('data.timestamp', 'ASC')
+                ->getQuery();
+
+        return $qb->execute();
     }
-    */
+
+    /**
+     * @param $timestamp
+     * @return IngestionData[]
+     */
+    public function findAllLessThan($timestamp): array {
+
+        $qb = $this->createQueryBuilder('data')
+                ->andWhere('data.timestamp <= :timestamp')
+                ->setParameter('timestamp', $timestamp)
+                ->orderBy('data.timestamp', 'ASC')
+                ->getQuery();
+
+        return $qb->execute();
+    }
+
+    /**
+     * @param $from_timestamp
+     * @param $to_timestamp
+     * @return IngestionData[]
+     */
+    public function findAllBetween($from_timestamp, $to_timestamp): array {
+
+        $qb = $this->createQueryBuilder('data')
+                ->andWhere('data.timestamp >= :from_timestamp')
+                ->setParameter('from_timestamp', $from_timestamp)
+                ->andWhere('data.timestamp <= :to_timestamp')
+                ->setParameter('to_timestamp', $to_timestamp)
+                ->orderBy('data.timestamp', 'ASC')
+                ->getQuery();
+
+        return $qb->execute();
+    }
+
 }
