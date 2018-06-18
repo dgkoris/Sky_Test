@@ -5,7 +5,6 @@ namespace App\Controller;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-use App\Constants;
 use App\Entity\IngestionData;
 
 define('MINUTE_SECONDS', 60);

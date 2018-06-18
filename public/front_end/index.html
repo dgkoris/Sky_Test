@@ -1,0 +1,207 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <script type="text/javascript" src="./scripts/jquery.min.js"></script>
+        <script type="text/javascript" src="./scripts/canvasjs.min.js"></script>  
+        <script type="text/javascript">
+
+            $(document).ready(function () {
+
+                var now = new Date();
+                now = new Date(now.getTime() - now.getTimezoneOffset() * 1000 * 60);
+                var last_hour = new Date(now.getTime() - (1000 * 60 * 60));
+
+                $("#from_datetime").attr("value", last_hour.toISOString().substr(0, 19));
+                $("#to_datetime").attr("value", now.toISOString().substr(0, 19));
+            });
+
+            function setIngestionData() {
+
+                var minutes = $("#minutes").val();
+                var url = "http://localhost:8000/ingest/" + minutes;
+
+                $.get(url, function (data, status) {
+                    if (status === "success") {
+                        showResult(data);
+                    }
+                });
+            }
+
+            function getIngestionData() {
+
+                var from_datetime = $("#from_datetime").val();
+                var to_datetime = $("#to_datetime").val();
+                var from_timestamp = Date.parse(from_datetime) / 1000;
+                var to_timestamp = Date.parse(to_datetime) / 1000;
+                var url = "http://localhost:8000/show/between/" + from_timestamp + "/" + to_timestamp;
+
+                $.get(url, function (data, status) {
+                    if (status === "success") {
+                        showResult(data);
+                    }
+                });
+            }
+
+            function showResult(json) {
+
+                var ingestion_data = JSON.parse(json);
+
+                var min_cpu = null;
+                var max_cpu = null;
+                var average_cpu = 0;
+
+                var min_concurrency = null;
+                var max_concurrency = null;
+                var average_concurrency = 0;
+
+                var data_points_cpu = [];
+                var data_points_concurrency = [];
+
+                for (var i = 0; i < ingestion_data.length; i++) {
+
+                    if (min_cpu > ingestion_data[i].cpu_load || !min_cpu) {
+                        min_cpu = ingestion_data[i].cpu_load;
+                    }
+                    if (max_cpu < ingestion_data[i].cpu_load || !max_cpu) {
+                        max_cpu = ingestion_data[i].cpu_load;
+                    }
+                    average_cpu += ingestion_data[i].cpu_load;
+                    if (min_concurrency > ingestion_data[i].concurrency || !min_concurrency) {
+                        min_concurrency = ingestion_data[i].concurrency;
+                    }
+                    if (max_concurrency < ingestion_data[i].concurrency || !max_concurrency) {
+                        max_concurrency = ingestion_data[i].concurrency;
+                    }
+                    average_concurrency += ingestion_data[i].concurrency;
+                }
+
+                for (var i = 0; i < ingestion_data.length; i++) {
+
+                    var date = new Date(ingestion_data[i].timestamp * 1000);
+
+                    var label_cpu = "";
+                    if (ingestion_data[i].cpu_load === min_cpu) {
+                        label_cpu = "Min CPU load: " + min_cpu;
+                    } else if (ingestion_data[i].cpu_load === max_cpu) {
+                        label_cpu = "Max CPU load: " + max_cpu;
+                    }
+
+                    var label_concurrency = "";
+                    if (ingestion_data[i].concurrency === min_concurrency) {
+                        label_concurrency = "Min concurrency: " + CanvasJS.formatNumber(min_concurrency, "###,###");
+                    } else if (ingestion_data[i].concurrency === max_concurrency) {
+                        label_concurrency = "Max concurrency: " + CanvasJS.formatNumber(max_concurrency, "###,###");
+                    }
+
+                    data_points_cpu.push({
+                        x: date,
+                        y: ingestion_data[i].cpu_load, indexLabel: label_cpu
+                    });
+
+                    data_points_concurrency.push({
+                        x: date,
+                        y: ingestion_data[i].concurrency, indexLabel: label_concurrency
+                    });
+                }
+
+                if (ingestion_data.length > 0) {
+
+                    average_cpu /= ingestion_data.length;
+                    average_cpu = Math.round(average_cpu * 100) / 100;
+
+                    average_concurrency /= ingestion_data.length;
+                    average_concurrency = Math.round(average_concurrency * 100) / 100;
+                }
+
+                var chart_cpu_load = new CanvasJS.Chart("chartCpuContainer", {
+
+                    title: {
+                        text: "Average CPU load: " + average_cpu
+                    },
+                    axisX: {
+                        valueFormatString: "HH:mm MM/DD/YYYY",
+                        interval: 1,
+                        intervalType: "minute"
+                    },
+                    axisY: {
+                        title: "CPU load",
+                        minimum: 0,
+                        maximum: 100,
+                        includeZero: true
+                    },
+                    toolTip: {
+                        contentFormatter: function (e) {
+                            var content = "";
+                            for (var i = 0; i < e.entries.length; i++) {
+                                content = "CPU load: <b>" + e.entries[i].dataPoint.y + "</b><br/>Time: <b>" + CanvasJS.formatDate(e.entries[i].dataPoint.x, "HH:mm:ss MM/DD/YYYY") + "</b>";
+                            }
+                            return content;
+                        }
+                    },
+                    data: [
+                        {
+                            type: "line",
+                            color: "red",
+                            dataPoints: data_points_cpu
+                        }
+                    ]
+                });
+
+                var chart_concurrency = new CanvasJS.Chart("chartConcurrencyContainer", {
+
+                    title: {
+                        text: "Average concurrency: " + CanvasJS.formatNumber(average_concurrency, "###,###.##")
+                    },
+                    axisX: {
+                        valueFormatString: "HH:mm MM/DD/YYYY",
+                        interval: 1,
+                        intervalType: "minute"
+                    },
+                    axisY: {
+                        title: "Concurrency",
+                        minimum: 0,
+                        maximum: 500000,
+                        includeZero: false
+                    },
+                    toolTip: {
+                        contentFormatter: function (e) {
+                            var content = "";
+                            for (var i = 0; i < e.entries.length; i++) {
+                                content = "<b>Concurrency: </b>" + CanvasJS.formatNumber(e.entries[i].dataPoint.y, "###,###") + "<br/>Time: <b>" + CanvasJS.formatDate(e.entries[i].dataPoint.x, "HH:mm:ss MM/DD/YYYY") + "</b>";
+                            }
+                            return content;
+                        }
+                    },
+                    data: [
+                        {
+                            type: "line",
+                            color: "blue",
+                            dataPoints: data_points_concurrency
+                        }
+                    ]
+                });
+
+                chart_cpu_load.render();
+                chart_concurrency.render();
+            }
+        </script>
+    </head>
+    <body>
+        <div>
+            Minutes before now (min=1, max=60):<br/>
+            <input type="number" id="minutes" value="5" min="1" max="60" style="width: 10em"> <button onclick="setIngestionData()">Post Ingestion Data</button>
+        </div>
+        <div>
+            From:<br/>
+            <input type="datetime-local" id="from_datetime"><br>
+            To:<br/>
+            <input type="datetime-local" id="to_datetime"><br>
+            <button onclick="getIngestionData()">Get Ingestion Data</button>
+        </div>        
+        <div id="chartCpuContainer" style="height: 300px; width: 100%;">
+        </div>
+        <br/>
+        <div id="chartConcurrencyContainer" style="height: 300px; width: 100%;">
+        </div>
+    </body>
+</html>

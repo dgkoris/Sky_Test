@@ -26,7 +26,7 @@ class RestAPI extends Controller {
     public function show(IngestionData $ingestion_data = null) {
 
         if (!$ingestion_data) {
-            return new Response('Data not found.');
+            return new Response(json_encode(array()));
         }
 
         $result[] = self::format_data($ingestion_data);
@@ -44,7 +44,7 @@ class RestAPI extends Controller {
                 ->findAllGreaterThan($timestamp);
 
         if (!$data) {
-            return new Response('Data not found.');
+            return new Response(json_encode(array()));
         }
 
         $result = array();
@@ -65,7 +65,7 @@ class RestAPI extends Controller {
                 ->findAllLessThan($timestamp);
 
         if (!$data) {
-            return new Response('Data not found.');
+            return new Response(json_encode(array()));
         }
 
         $result = array();
@@ -86,7 +86,7 @@ class RestAPI extends Controller {
                 ->findAllBetween($from_timestamp, $to_timestamp);
 
         if (!$data) {
-            return new Response('Data not found.');
+            return new Response(json_encode(array()));
         }
 
         $result = array();
